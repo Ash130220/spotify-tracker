@@ -71,11 +71,12 @@ async function checkPlaylist() {
             }
         );
 
-        const currentState = {
-            snapshot: response.data.snapshot_id,
-            name: response.data.name,
-            description: response.data.description
-        };
+       const currentState = JSON.stringify({
+    snapshot: response.data.snapshot_id,
+    name: response.data.name,
+    description: response.data.description,
+    tracks: response.data.tracks.total
+});
 
         // first run
         if (!oldState) {
@@ -84,11 +85,7 @@ async function checkPlaylist() {
         }
 
         // detect ANY change
-        const changed =
-            oldState.snapshot !== currentState.snapshot ||
-            oldState.name !== currentState.name ||
-            oldState.description !== currentState.description;
-
+   const changed = oldState !== currentState;
         if (changed) {
 
             console.log("Playlist updated");
