@@ -1,6 +1,4 @@
 const axios = require("axios");
-const fs = require("fs");
-
 require("dotenv").config();
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -9,10 +7,9 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-console.log("CLIENT_ID =", CLIENT_ID);
-console.log("CLIENT_SECRET =", CLIENT_SECRET);
-// ONLY playlist ID
 const PLAYLIST_ID = "0pnPGNqeKlsfRxfABJIJgP";
+
+let oldSnapshot = "";
 
 async function getToken() {
     const response = await axios.post(
@@ -35,19 +32,31 @@ async function getToken() {
     return response.data.access_token;
 }
 
-
 async function sendTelegramMessage(message) {
-    await axios.post(
-        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-        {
-            chat_id: CHAT_ID,
-            text: message
-        }
-    );
+    try {
+        await axios.post(
+            `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+            {
+                chat_id: CHAT_ID,
+                text: message
+            }
+        );
+
+        console.log("Telegram message sent");
+
+    } catch (err) {
+        console.log(
+            "Telegram Error:",
+            err.response?.data || err.message
+        );
+    }
 }
 
 async function checkPlaylist() {
     try {
+
+        console.log("Checking playlist...");
+
         const token = await getToken();
 
         const response = await axios.get(
@@ -61,38 +70,42 @@ async function checkPlaylist() {
 
         const newSnapshot = response.data.snapshot_id;
 
-        let oldSnapshot = "";
+        if (
+            oldSnapshot !== "" &&
+            oldSnapshot !== newSnapshot
+        ) {
+            console.log("Playlist updated");
 
-        if (fs.existsSync("data.json")) {
-            const data = JSON.parse(
-                fs.readFileSync("data.json", "utf8")
+            await sendTelegramMessage(
+                "🔥 PLAYLIST UPDATED!"
             );
-
-            oldSnapshot = data.snapshot || "";
         }
 
-        // print ONLY if changed
-        if (oldSnapshot && oldSnapshot !== newSnapshot) {
-            await sendTelegramMessage("🔥 PLAYLIST UPDATED!");
-        }
-
-        // save snapshot
-        fs.writeFileSync(
-            "data.json",
-            JSON.stringify(
-                { snapshot: newSnapshot },
-                null,
-                2
-            )
-        );
+        oldSnapshot = newSnapshot;
 
     } catch (err) {
-        console.log(err.response?.data || err.message);
+
+        if (err.response?.status === 429) {
+            console.log("Spotify rate limited");
+            return;
+        }
+
+        console.log(
+            "Error:",
+            err.response?.data || err.message
+        );
     }
 }
 
-checkPlaylist();
+async function start() {
 
-sendTelegramMessage("TEST MESSAGE");
+    await sendTelegramMessage(
+        "✅ Render bot started"
+    );
 
-setInterval(checkPlaylist, 60000);
+    await checkPlaylist();
+
+    setInterval(checkPlaylist, 60000);
+}
+
+start();
