@@ -1,8 +1,8 @@
 const axios = require("axios");
 const fs = require("fs");
 
-const CLIENT_ID = "d2cea5ef680f41d28becac432f7b56dc";
-const CLIENT_SECRET = "f41e3c92b4ac4627b92052b42b05fdd3";
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 // ONLY playlist ID
 const PLAYLIST_ID = "3RagErmb9JKqOCuizMm0in";
