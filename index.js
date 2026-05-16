@@ -120,7 +120,7 @@ async function start() {
     await checkPlaylist();
 
     // 1 minute
-    setInterval(checkPlaylist, 10000);
+    setInterval(checkPlaylist, 60000);
 }
 
 start();
