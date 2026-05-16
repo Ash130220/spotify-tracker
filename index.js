@@ -92,5 +92,4 @@ async function checkPlaylist() {
 }
 
 checkPlaylist();
-
-setInterval(checkPlaylist, 5000);
+setInterval(checkPlaylist, 60000);
