@@ -3,33 +3,27 @@ require("dotenv").config();
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-// ONLY playlist ID
 const PLAYLIST_ID = "0pnPGNqeKlsfRxfABJIJgP";
 
+// Track the state as a JavaScript object instead of a raw string
 let oldState = null;
 
 async function getToken() {
-    const response = await axios.post(
-        "https://accounts.spotify.com/api/token",
-        new URLSearchParams({
-            grant_type: "client_credentials"
-        }),
-        {
-            headers: {
-                Authorization:
-                    "Basic " +
-                    Buffer.from(
-                        CLIENT_ID + ":" + CLIENT_SECRET
-                    ).toString("base64"),
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-        }
-    );
+    // Corrected to use a standard URL-encoded body string for Axios compatibility
+    const authOptions = {
+        url: "https://accounts.spotify.com/api/token",
+        method: "post",
+        headers: {
+            "Authorization": "Basic " + Buffer.from(CLIENT_ID + ":" + CLIENT_SECRET).toString("base64"),
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        data: "grant_type=client_credentials"
+    };
 
+    const response = await axios(authOptions);
     return response.data.access_token;
 }
 
@@ -42,24 +36,15 @@ async function sendTelegramMessage(message) {
                 text: message
             }
         );
-
         console.log("Telegram message sent");
-
     } catch (err) {
-
-        console.log(
-            "Telegram Error:",
-            err.response?.data || err.message
-        );
+        console.error("Telegram Error:", err.response?.data || err.message);
     }
 }
 
 async function checkPlaylist() {
-
     try {
-
         console.log("Checking playlist...");
-
         const token = await getToken();
 
         const response = await axios.get(
@@ -71,56 +56,67 @@ async function checkPlaylist() {
             }
         );
 
-       const currentState = JSON.stringify({
-    snapshot: response.data.snapshot_id,
-    name: response.data.name,
-    description: response.data.description,
-    tracks: response.data.tracks.total
-});
+        // Gather only what you care about tracking
+        const currentState = {
+            snapshot: response.data.snapshot_id,
+            name: response.data.name,
+            description: response.data.description,
+            tracks: response.data.tracks.total
+        };
 
-        // first run
+        // First run initialization
         if (!oldState) {
             oldState = currentState;
             return;
         }
 
-        // detect ANY change
-   const changed = oldState !== currentState;
-        if (changed) {
+        // Build precise change logs
+        let changes = [];
 
-            console.log("Playlist updated");
+        if (oldState.name !== currentState.name) {
+            changes.push(`📝 Name changed to: "${currentState.name}" (was "${oldState.name}")`);
+        }
+        if (oldState.description !== currentState.description) {
+            changes.push(`ℹ️ Description updated.`);
+        }
+        if (oldState.tracks !== currentState.tracks) {
+            changes.push(`🎵 Tracks count changed: ${oldState.tracks} ➡️ ${currentState.tracks}`);
+        }
+        // Catch-all for reordered songs or internal playlist updates
+        if (oldState.snapshot !== currentState.snapshot && changes.length === 0) {
+            changes.push(`🔄 Playlist tracks were reordered or modified.`);
+        }
 
-            await sendTelegramMessage(
-                "🔥 PLAYLIST UPDATED!"
-            );
+        // If changes happened, notify Telegram
+        if (changes.length > 0) {
+            console.log("Playlist updated:", changes);
+            
+            const msg = `🔥 PLAYLIST UPDATED!\n\n${changes.join("\n")}`;
+            await sendTelegramMessage(msg);
 
+            // Update oldState to the new current reality
             oldState = currentState;
         }
 
     } catch (err) {
-
         if (err.response?.status === 429) {
-            console.log("Spotify rate limited");
+            console.warn("Spotify rate limited. Skipping this interval.");
             return;
         }
-
-        console.log(
-            "Error:",
-            err.response?.data || err.message
-        );
+        console.error("Error:", err.response?.data || err.message);
     }
 }
 
 async function start() {
-
-    await sendTelegramMessage(
-        "✅ Render bot started"
-    );
-
-    await checkPlaylist();
-
-    // 1 minute
-    setInterval(checkPlaylist, 60000);
+    try {
+        await sendTelegramMessage("✅ Render bot started");
+        await checkPlaylist();
+        
+        // Polling interval safely wrapped inside start
+        setInterval(checkPlaylist, 60000);
+    } catch (err) {
+        console.error("Failed to start application:", err.message);
+    }
 }
 
 start();
