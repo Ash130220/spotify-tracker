@@ -9,7 +9,7 @@ const CHAT_ID = process.env.CHAT_ID;
 
 const PLAYLIST_ID = "0pnPGNqeKlsfRxfABJIJgP";
 
-let oldSnapshot = "";
+let oldSnapshot = null;
 
 async function getToken() {
     const response = await axios.post(
@@ -89,7 +89,7 @@ if (
             );
         }
 
-        oldSnapshot = newSnapshot;
+        oldSnapshot = currentState;
 
     } catch (err) {
 
