@@ -7,9 +7,10 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
+// ONLY playlist ID
 const PLAYLIST_ID = "0pnPGNqeKlsfRxfABJIJgP";
 
-let oldSnapshot = null;
+let oldState = null;
 
 async function getToken() {
     const response = await axios.post(
@@ -45,6 +46,7 @@ async function sendTelegramMessage(message) {
         console.log("Telegram message sent");
 
     } catch (err) {
+
         console.log(
             "Telegram Error:",
             err.response?.data || err.message
@@ -53,6 +55,7 @@ async function sendTelegramMessage(message) {
 }
 
 async function checkPlaylist() {
+
     try {
 
         console.log("Checking playlist...");
@@ -68,28 +71,34 @@ async function checkPlaylist() {
             }
         );
 
-     const currentState = {
-    snapshot: response.data.snapshot_id,
-    name: response.data.name,
-    description: response.data.description
-};
+        const currentState = {
+            snapshot: response.data.snapshot_id,
+            name: response.data.name,
+            description: response.data.description
+        };
 
-if (
-    oldSnapshot &&
-    (
-        oldSnapshot.snapshot !== currentState.snapshot ||
-        oldSnapshot.name !== currentState.name ||
-        oldSnapshot.description !== currentState.description
-    )
-) {
+        // first run
+        if (!oldState) {
+            oldState = currentState;
+            return;
+        }
+
+        // detect ANY change
+        const changed =
+            oldState.snapshot !== currentState.snapshot ||
+            oldState.name !== currentState.name ||
+            oldState.description !== currentState.description;
+
+        if (changed) {
+
             console.log("Playlist updated");
 
             await sendTelegramMessage(
                 "🔥 PLAYLIST UPDATED!"
             );
-        }
 
-        oldSnapshot = currentState;
+            oldState = currentState;
+        }
 
     } catch (err) {
 
@@ -113,6 +122,7 @@ async function start() {
 
     await checkPlaylist();
 
+    // 1 minute
     setInterval(checkPlaylist, 60000);
 }
 
