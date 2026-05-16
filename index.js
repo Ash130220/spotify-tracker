@@ -7,17 +7,19 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-// ONLY playlist ID
 const PLAYLIST_ID = "0pnPGNqeKlsfRxfABJIJgP";
 
-let oldState = null;
+let previousState = null;
 
-async function getToken() {
+async function getSpotifyToken() {
+
     const response = await axios.post(
         "https://accounts.spotify.com/api/token",
+
         new URLSearchParams({
             grant_type: "client_credentials"
         }),
+
         {
             headers: {
                 Authorization:
@@ -25,7 +27,9 @@ async function getToken() {
                     Buffer.from(
                         CLIENT_ID + ":" + CLIENT_SECRET
                     ).toString("base64"),
-                "Content-Type": "application/x-www-form-urlencoded"
+
+                "Content-Type":
+                    "application/x-www-form-urlencoded"
             }
         }
     );
@@ -34,7 +38,9 @@ async function getToken() {
 }
 
 async function sendTelegramMessage(message) {
+
     try {
+
         await axios.post(
             `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
             {
@@ -48,7 +54,7 @@ async function sendTelegramMessage(message) {
     } catch (err) {
 
         console.log(
-            "Telegram Error:",
+            "Telegram error:",
             err.response?.data || err.message
         );
     }
@@ -60,10 +66,11 @@ async function checkPlaylist() {
 
         console.log("Checking playlist...");
 
-        const token = await getToken();
+        const token = await getSpotifyToken();
 
         const response = await axios.get(
             `https://api.spotify.com/v1/playlists/${PLAYLIST_ID}`,
+
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -71,36 +78,46 @@ async function checkPlaylist() {
             }
         );
 
-       const currentState = JSON.stringify({
-    snapshot: response.data.snapshot_id,
-    name: response.data.name,
-    description: response.data.description,
-    tracks: response.data.tracks.total
-});
+        const playlist = response.data;
 
-        // first run
-        if (!oldState) {
-            oldState = currentState;
+        // COMPLETE PLAYLIST STATE
+        const currentState = JSON.stringify({
+            name: playlist.name,
+            description: playlist.description,
+            tracks: playlist.tracks.total,
+            snapshot: playlist.snapshot_id
+        });
+
+        // FIRST RUN
+        if (previousState === null) {
+
+            previousState = currentState;
+
+            console.log("Initial playlist saved");
+
             return;
         }
 
-        // detect ANY change
-   const changed = oldState !== currentState;
-        if (changed) {
+        // DETECT CHANGE
+        if (previousState !== currentState) {
 
-            console.log("Playlist updated");
+            console.log("PLAYLIST UPDATED");
 
             await sendTelegramMessage(
                 "🔥 PLAYLIST UPDATED!"
             );
 
-            oldState = currentState;
+            previousState = currentState;
         }
 
     } catch (err) {
 
         if (err.response?.status === 429) {
-            console.log("Spotify rate limited");
+
+            console.log(
+                "Spotify rate limited"
+            );
+
             return;
         }
 
@@ -113,13 +130,15 @@ async function checkPlaylist() {
 
 async function start() {
 
+    // BOT ONLINE MESSAGE
     await sendTelegramMessage(
         "✅ Render bot started"
     );
 
+    // FIRST CHECK
     await checkPlaylist();
 
-    // 1 minute
+    // CHECK EVERY 1 MINUTE
     setInterval(checkPlaylist, 60000);
 }
 
