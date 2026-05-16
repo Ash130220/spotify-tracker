@@ -92,4 +92,7 @@ async function checkPlaylist() {
 }
 
 checkPlaylist();
+
+sendTelegramMessage("TEST MESSAGE");
+
 setInterval(checkPlaylist, 60000);
