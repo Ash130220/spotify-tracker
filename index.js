@@ -65,10 +65,10 @@ async function checkPlaylist() {
         };
 
         // First run initialization
-        if (!oldState) {
-            oldState = currentState;
-            return;
-        }
+      if (!oldState) {
+    oldState = currentState;
+    return;
+}
 
         // Build precise change logs
         let changes = [];
