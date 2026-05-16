@@ -12,7 +12,7 @@ const CHAT_ID = process.env.CHAT_ID;
 console.log("CLIENT_ID =", CLIENT_ID);
 console.log("CLIENT_SECRET =", CLIENT_SECRET);
 // ONLY playlist ID
-const PLAYLIST_ID = "3RagErmb9JKqOCuizMm0in";
+const PLAYLIST_ID = "0pnPGNqeKlsfRxfABJIJgP";
 
 async function getToken() {
     const response = await axios.post(
