@@ -68,12 +68,20 @@ async function checkPlaylist() {
             }
         );
 
-        const newSnapshot = response.data.snapshot_id;
+     const currentState = {
+    snapshot: response.data.snapshot_id,
+    name: response.data.name,
+    description: response.data.description
+};
 
-        if (
-            oldSnapshot !== "" &&
-            oldSnapshot !== newSnapshot
-        ) {
+if (
+    oldSnapshot &&
+    (
+        oldSnapshot.snapshot !== currentState.snapshot ||
+        oldSnapshot.name !== currentState.name ||
+        oldSnapshot.description !== currentState.description
+    )
+) {
             console.log("Playlist updated");
 
             await sendTelegramMessage(
